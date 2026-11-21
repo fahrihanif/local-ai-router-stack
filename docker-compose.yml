@@ -1,0 +1,49 @@
+services:
+  9router:
+    image: decolua/9router:latest
+    container_name: 9router
+    restart: always
+    ports:
+      - "20128:20128"
+    volumes:
+      - 9router-data:/app/data
+    env_file:
+      - .env
+    environment:
+      DATA_DIR: /app/data
+      PORT: "20128"
+      HOSTNAME: "0.0.0.0"
+      NODE_ENV: production
+      HEADROOM_URL: http://headroom:8787
+    depends_on:
+      - headroom
+
+  headroom:
+    image: ghcr.io/chopratejas/headroom:latest
+    container_name: headroom
+    restart: always
+    ports:
+      - "127.0.0.1:8787:8787"
+
+  openclaude:
+    build: ./openclaude
+    container_name: openclaude
+    depends_on:
+      - 9router
+    stdin_open: true
+    tty: true
+    environment:
+      CLAUDE_CODE_USE_OPENAI: "1"
+      OPENAI_BASE_URL: http://9router:20128/v1
+      OPENAI_API_KEY: ${API_KEY_SECRET}
+      OPENAI_MODEL: ${OPENCLAUDE_MODEL:-openrouter/free-tiers-combo}
+    volumes:
+      - ./workspace:/workspace                
+      - openclaude-config:/home/node/.openclaude
+    profiles: ["cli"]   
+
+volumes:
+  openclaude-config:
+    name: openclaude-data
+  9router-data:
+    name: 9router-data
